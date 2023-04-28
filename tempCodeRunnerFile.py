@@ -1,1 +1,2 @@
-30
+
+cap = cv2.VideoCaptu

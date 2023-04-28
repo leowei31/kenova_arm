@@ -83,7 +83,7 @@ def example_cartesian_action_movement(base, base_cyclic, movement = {'x': 0,
                                                                     'theta_x': 0,
                                                                     'theta_y': 0,
                                                                     'theta_z': 0}):
-    
+    print(movement)
     print("Starting Cartesian action movement ...")
     action = Base_pb2.Action()
     action.name = "Example Cartesian action movement"
@@ -236,13 +236,12 @@ def main():
         success &= example_move_to_home_position(base)
         success &= example_cartesian_action_movement(base, base_cyclic, tilting_gripper)
         # Move gripper to location of object
-        success &= example_cartesian_action_movement(base, base_cyclic, movement)
-        success &= example_cartesian_action_movement(base, base_cyclic, move_grip_down)
+        # success &= example_cartesian_action_movement(base, base_cyclic, movement)
+        # success &= example_cartesian_action_movement(base, base_cyclic, move_grip_down)
 
-        # Gripper grip object
-        success &= ExampleSendGripperCommands(base, 1)
+        # # Gripper grip object
+        # success &= ExampleSendGripperCommands(base, 1)
         # success &= example_cartesian_action_movement(base, base_cyclic, move_grip_up)
-        # success &= example_cartesian_action_movement(base, base_cyclic, reverse_movement)
 
         # success &= example_cartesian_action_movement(base, base_cyclic, second_move)
         # success &= example_cartesian_action_movement(base, base_cyclic, move_grip_down)

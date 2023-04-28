@@ -2,9 +2,8 @@ import cv2
 import numpy as np
 import multiprocessing
 import time
+from move_angular_and_cartesian import *
 
-
-my_lock = multiprocessing.Lock()
 shared_white = multiprocessing.Array('f', [0, 0])
 my_shared_variable_white = tuple(shared_white)
 shared_blue = multiprocessing.Array('f', [0, 0])
@@ -119,13 +118,14 @@ def cv():
 
         # Exit the loop if the user presses the 'q' key
         if cv2.waitKey(1) & 0xFF == ord('q'):
+            print(cv2.waitKey(1), f'break ********* {0xFF=}')
             break
+
+        #do_stuff()
 
     # Release the video capture object and destroy all windows
     cap.release()
     cv2.destroyAllWindows()
-
-
 
 from typing import Tuple,List
 
@@ -172,37 +172,145 @@ class Pixel_to_cm:
         return tuple(temp)
         
 
-origin_pixel = (192, 114)
-ref_p1_pixel, ref_p2_pixel = (73 , 643 ), (769 , 100)
-ref_p1_cm, ref_p2_cm = (0, 40), (40 , 0)
+origin_pixel = ( 200 , 135 )
+ref_p1_pixel, ref_p2_pixel = ( 757 , 115), ( 788 , 628)
+ref_p1_cm, ref_p2_cm = (40,0), (40 , 40)
 transformer = Pixel_to_cm().fit(origin_pixel, [ref_p1_pixel, ref_p2_pixel], [ref_p1_cm, ref_p2_cm])
 
-def do_stuff():
+def do_stuff(base, base_cyclic):
     global my_shared_variable_white
     global my_shared_variable_blue
-
+    global transformer
     print(my_shared_variable_white, my_shared_variable_blue)
+
     print(transformer.transform(my_shared_variable_white))
     print(transformer.transform(my_shared_variable_blue))
 
-if __name__=='__main__':
-    # origin_pixel = (235, 34)
-    # ref_p1_pixel, ref_p2_pixel = (141, 545), (789, 29)
-    # ref_p1_cm, ref_p2_cm = (0, 40), (40 , 0)
+    blue = transformer.transform(my_shared_variable_blue)
+    white = transformer.transform(my_shared_variable_white)
+    # sys.path.insert(0, os.path.join(os.path.dirname(__file__), ".."))
+    # import utilities
 
+    # # Parse arguments
+    # args = utilities.parseConnectionArguments()
     
+    # # Create connection to the device and get the router
+    # with utilities.DeviceConnection.createTcpConnection(args) as router:
+
+    #     # Create required services
+    #     base = BaseClient(router)
+    #     base_cyclic = BaseCyclicClient(router)
+
+        # Example core
+    success = True
+
+    tilting_gripper = {'x': 0,
+                'y': 0,
+                'z': 0,
+                'theta_x': 90,
+                'theta_y': 0,
+                'theta_z': 0}
+
+    movement = {'x': -(0.01 * blue[1] - 0.09),
+                'y': (0.54 - 0.01 *blue[0]),
+                'z': 0,
+                'theta_x': 0,
+                'theta_y': 0,
+                'theta_z': 0}
+
+    move_grip_down = {'x': 0,
+                'y': 0,
+                'z': -0.3,
+                'theta_x': 0,
+                'theta_y': 0,
+                'theta_z': 0}
+    move_grip_down_two = {'x': 0,
+                'y': 0,
+                'z': -0.08,
+                'theta_x': 0,
+                'theta_y': 0,
+                'theta_z': 0}
+    move_grip_up = {'x': 0,
+                'y': 0,
+                'z': 0.15,
+                'theta_x': 0,
+                'theta_y': 0,
+                'theta_z': 0}
+
+    second_move = {'x': -0.01*(white[1]-blue[1]),
+                    'y': -0.01*(white[0]- blue[0]),
+                    'z': 0,
+                    'theta_x': 0,
+                    'theta_y': 0,
+                    'theta_z': 0}
+
+    success &= ExampleSendGripperCommands(base,0.1)
+    success &= example_move_to_home_position(base)
+    success &= example_cartesian_action_movement(base, base_cyclic, tilting_gripper)
+    # Move gripper to location of object
+    success &= example_cartesian_action_movement(base, base_cyclic, move_grip_down)
+    success &= example_cartesian_action_movement(base, base_cyclic, movement)
+    success &= example_cartesian_action_movement(base, base_cyclic, move_grip_down_two)
+
+    # Gripper grip object
+    success &= ExampleSendGripperCommands(base, 0.5)
+    example_cartesian_action_movement(base, base_cyclic, move_grip_up)
+    example_cartesian_action_movement(base, base_cyclic, move_grip_up)
+    example_cartesian_action_movement(base, base_cyclic, second_move)
+    example_cartesian_action_movement(base, base_cyclic, move_grip_down_two)
+    ExampleSendGripperCommands(base, 0.1)
+
+        # success &= example_cartesian_action_movement(base, base_cyclic, move_grip_up)
+        # success &= example_cartesian_action_movement(base, base_cyclic, reverse_movement)
+
+        # success &= example_cartesian_action_movement(base, base_cyclic, second_move)
+        # success &= example_cartesian_action_movement(base, base_cyclic, move_grip_down)
+
+        # Gripper release object
+        # success &= ExampleSendGripperCommands(base, 0.1)
+
+        # You can also refer to the 110-Waypoints examples if you want to execute
+        # a trajectory defined by a series of waypoints in joint space or in Cartesian space
+
+    return 0 if success else 1
+
+if __name__=='__main__':
+    # print(transformer.transform(( 757 , 115)))
+    # exit(0)
+    
+    sys.path.insert(0, os.path.join(os.path.dirname(__file__), ".."))
+    import utilities
+
+    # Parse arguments
+    args = utilities.parseConnectionArguments()
     while user_input:= input("Would you like arm to continue? Y for Yes, Anything else for No ") == "Y":
         # cv()
-        thread1 = multiprocessing.Process(target=cv)
-        thread2 = multiprocessing.Process(target=do_stuff)
-        thread1.start()
-        time.sleep(3)
-        thread2.start()
+        # thread1 = multiprocessing.Process(target=cv)
+        # thread2 = multiprocessing.Process(target=do_stuff)
+        # thread1.start()
+        # time.sleep(3)
+        # thread2.start()
         
+        # Create connection to the device and get the router
+        with utilities.DeviceConnection.createTcpConnection(args) as router:
+
+            # Create required services
+            base = BaseClient(router)
+            base_cyclic = BaseCyclicClient(router)
+
+            # Example core
+            success = True
+            success &= example_move_to_home_position(base)
+            cv()
+
+            do_stuff(base, base_cyclic)
 
         # wait for threads to finish
-        thread1.join()
-        thread2.join()
+        # thread1.join()
+        # thread2.join()
+
+        # global my_shared_variable_blue
+        # print(my_shared_variable_blue)
 
     # print(transformer.transform(( 405 , 338 )))
     
